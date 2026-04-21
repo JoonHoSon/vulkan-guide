@@ -15,7 +15,7 @@
 #include "vk_initializer.h"
 #include "vk_types.h"
 
-constexpr bool bUseValidationLayers = false;
+constexpr bool bUseValidationLayers = true;
 
 VulkanEngine *loadedEngine = nullptr;
 
@@ -114,6 +114,7 @@ void VulkanEngine::initVulkan() {
 
     // FIXME(joonho): 2026-04-21 macOS에서 1.4 feature 설정 시 오류 발생함
     // Vulkan 1.4 features
+#if ndefined(__WIN64)
     VkPhysicalDeviceVulkan14Features features14{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES};
     features14.dynamicRenderingLocalRead = true;
 
@@ -121,6 +122,7 @@ void VulkanEngine::initVulkan() {
     VkPhysicalDeviceVulkan13Features features13{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
     features13.dynamicRendering = true;
     features13.synchronization2 = true;
+#endif
 
     // Vulkan 1.2 features
     VkPhysicalDeviceVulkan12Features feature12{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
@@ -129,12 +131,22 @@ void VulkanEngine::initVulkan() {
     feature12.descriptorIndexing = true;
 
     vkb::PhysicalDeviceSelector selector{vkb_inst};
+
+#if ndefined(__WIN64)
     selector = selector.set_minimum_version(1, 3)
                        .set_required_features_12(feature12)
                        .set_required_features_13(features13)
                        // .set_required_features_14(features14)
                        .set_surface(_surface);
+#else
+    // windows(bootcapt) amd driver가 구버전임
+    // Layer VK_LAYER_AMD_switchable_graphics uses API version 1.2 which is older than the application specified API version of 1.4. May cause issues.
+    selector = selector.set_minimum_version(1, 2)
+                       .set_required_features_12(feature12)
+                       .set_surface(_surface);
+#endif
 
+    // selector에서 오류 발생(Windows 11, MBPR2018 / Bootcamp)
     std::vector<vkb::PhysicalDevice> devices = selector.select_devices().value();
 
     for (const auto &dev: devices) {
@@ -147,7 +159,7 @@ void VulkanEngine::initVulkan() {
         spdlog::debug("Vendor ID      : {}", dev.properties.vendorID);
     }
 
-    vkb::PhysicalDevice device = selector.set_surface(_surface).select().value();
+    vkb::PhysicalDevice device = selector.select().value();
 
     vkb::DeviceBuilder deviceBuilder{device};
     vkb::Device vkbDevice = deviceBuilder.build().value();
