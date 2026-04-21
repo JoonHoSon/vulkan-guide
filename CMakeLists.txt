@@ -3,13 +3,6 @@ project(vulkan_guide)
 
 set(CMAKE_CXX_STANDARD 20)
 
-if (WIN32)
-    include($ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
-    set(CMAKE_C_FLAGS "-fexec-charset=CP949")
-    set(CMAKE_CXX_FLAGS "-fexec-charset=CP949")
-    set(VULKAN_INC_DIR "C:/VulkanSDK/1.4.341.1/Include")
-endif()
-
 set(SOURCES
     src/main.cpp
     src/vk_engine.cpp
@@ -20,7 +13,12 @@ set(SOURCES
 
 find_package(Vulkan REQUIRED)
 
-message("Vulkan include dir : ${Vulkan_INCLUDE_DIRS}")
+if (WIN32)
+    include($ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
+    set(VULKAN_INC_DIR "C:/VulkanSDK/1.4.341.1/Include")
+else ()
+    set(VULKAN_INC_DIR "${Vulkan_INCLUDE_DIRS}/vulkan")
+endif ()
 
 include_directories(${VULKAN_INC_DIR})
 
