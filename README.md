@@ -36,3 +36,39 @@ sudo cmake --install build
 
 - `/usr/local/lib/libvk-bootstrap.a`
 - `/usr/loccal/lib/vk-bootstrap/vk-bootstrap*.cmake` => cmake 파일?
+
+# 정리
+
+## `VkSemaphore`
+
+GPU의 실행 순서 보장
+
+```cpp
+VkSemaphore task1;
+VkSemaphore task2;
+
+VkOperation opFrist;
+
+opFirst.signalSemaphore = task1; // signal 수신용으로 task1 할당
+
+VkDoSomething(opFirst);
+
+VkOperation opSecond;
+
+opSecond.signalSemaphore = task2; // signal 수신용으로 task2 할당
+opSecond.waitSemaphore = task1;   // task1 완료시까지 대기
+
+VkDoSomething(opSecond); // task1이 끝난 후 수행
+
+VkOperation opThird;
+
+opThird.waitSemaphore = task2; // task2 완료시까지 대기
+
+VkDoSomething(opThird); // task2(opSecond)가 종료된 후 수행
+```
+
+## vkWaitForFences()
+
+마지막 인자인 `timeout`은 nano 단위
+
+``1s = 1000m = 1000000µ = 1000000000n``

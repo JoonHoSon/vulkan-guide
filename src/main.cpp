@@ -4,6 +4,11 @@
 // TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 
 int main() {
+#ifdef DEBUG_BUILD
+    spdlog::set_level(spdlog::level::debug);
+#else
+    spdlog::set_level(spdlog::level::info);
+#endif
     VulkanEngine engine;
 
     engine.init();
