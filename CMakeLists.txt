@@ -1,10 +1,17 @@
 cmake_minimum_required(VERSION 4.2)
 project(vulkan_guide)
 
+# TODO(joonho): 2026-04-23 Windows VMA 설치 및 환경 변수 확인 필요
+if (NOT DEFINED ENV{VMA_LIB})
+    message("VMA_LIB 설정이 없음")
+    return()
+endif ()
+
 set(CMAKE_CXX_STANDARD 20)
 
 set(SOURCES
     src/main.cpp
+    src/vk_engine.h
     src/vk_engine.cpp
     src/vk_types.h
     src/vk_initializer.h
@@ -47,6 +54,11 @@ find_package(fmt REQUIRED)
 # ---------------------------------------------------------------------------------------------------------------
 find_package(vk-bootstrap REQUIRED)
 
+# ---------------------------------------------------------------------------------------------------------------
+# Vulkan Memory Allocator(VMA)
+# ---------------------------------------------------------------------------------------------------------------
+find_package(VulkanMemoryAllocator CONFIG REQUIRED HINTS "$ENV{VMA_LIB}")
+
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 # if (WIN32)
@@ -63,4 +75,5 @@ target_link_libraries(${PROJECT_NAME}
     glm::glm
     vk-bootstrap::vk-bootstrap
     Vulkan::Vulkan
+    GPUOpen::VulkanMemoryAllocator
 )
