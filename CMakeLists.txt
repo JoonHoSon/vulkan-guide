@@ -9,6 +9,8 @@ set(SOURCES
     src/vk_types.h
     src/vk_initializer.h
     src/vk_initializer.cpp
+    src/vk_images.h
+    src/vk_images.cpp
 )
 
 find_package(Vulkan REQUIRED)
@@ -46,6 +48,13 @@ find_package(fmt REQUIRED)
 find_package(vk-bootstrap REQUIRED)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
+
+# if (WIN32)
+#     target_compile_definitions(${PROJECT_NAME}
+#         PRIVATE
+#         VK_USE
+#     )
+# elseif (Darwin)
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE

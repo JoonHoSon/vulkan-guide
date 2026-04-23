@@ -14,8 +14,16 @@
 
 struct FrameData {
     VkCommandPool _commandPool;
+
     VkCommandBuffer _commandBuffer;
-    VkSemaphore _swapChainSemaphore, _renderSemaphore;
+
+    // 렌더링 명령이 스왑체인 이미지 요청을 대기 하도록 한다.
+    VkSemaphore _swapChainSemaphore;
+
+    // 그리기가 끝났을 때 이미지를 OS에 표시하는 것을 제어한다.
+    VkSemaphore _renderSemaphore;
+
+    // 주어진 프레임의 그리기 명령이 끝날때까지 대기 하도록 한다.
     VkFence _renderFence;
 };
 

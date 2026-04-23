@@ -71,4 +71,70 @@ VkDoSomething(opThird); // task2(opSecond)가 종료된 후 수행
 
 마지막 인자인 `timeout`은 nano 단위
 
-``1s = 1000m = 1000000µ = 1000000000n``
+```cpp
+1s = 1000m = 1'000'000µ = 1'000'000'000n
+```
+
+## Pipeline에서의 Barrier 최적화 참고
+
+`vkUtil::transitionImage`에서 사용된 `VkImageMemoryBarrier2`에 대한 보다 자세한 최적화 방법은
+[Khronos Vulkan Documentation: Synchronization examples](https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples)
+참고
+
+## Image layout 관련
+
+`VulkanEngine#draw()`에서 사용하는 `VK_IMAGE_LAYOUT_GENERAL`은 범용적인 레이아웃으로 이미지로부터 읽기/쓰기가 가능하다.<br>
+Image layout에 대해 보다 자세한
+설명은 [Vulkan Spec: image layouts](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap12.html#resources-image-layouts)
+참고 
+
+# 오류 발생
+
+아래 오류는 모두 유효성 검사 활성화 여부(`bUseValidationLayers`)가 활성화 되었을 경우에 출력됨.<br>
+[Swapchain Semaphore Reuse](https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html)문서 확인 필요.
+
+## 온라인 소스(chapt-1)
+
+```bash
+[ERROR: Validation] - VUID-vkQueueSubmit-pSignalSemaphores-00067
+vkQueueSubmit(): pSubmits[0].pSignalSemaphores[0] (VkSemaphore 0x110000000011) is being signaled by VkQueue 0xb7f12df58, but it may still be in use by VkSwapchainKHR 0x30000000003.
+Most recently acquired image indices: [0], 1.
+(Brackets mark the last use of VkSemaphore 0x110000000011 in a presentation operation.)
+Swapchain image 0 was presented but was not re-acquired, so VkSemaphore 0x110000000011 may still be in use and cannot be safely reused with image index 1.
+Vulkan insight: See https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html for details on swapchain semaphore reuse. Examples of possible approaches:
+   a) Use a separate semaphore per swapchain image. Index these semaphores using the index of the acquired image.
+   b) Consider the VK_KHR_swapchain_maintenance1 extension. It allows using a VkFence with the presentation operation.
+The Vulkan spec states: Each binary semaphore element of the pSignalSemaphores member of any element of pSubmits must be unsignaled when the semaphore signal operation it defines is executed on the device (https://vulkan.lunarg.com/doc/view/1.4.341.0/mac/antora/spec/latest/chapters/cmdbuffers.html#VUID-vkQueueSubmit-pSignalSemaphores-00067)
+[ERROR: Validation] - VUID-vkQueueSubmit-pSignalSemaphores-00067
+vkQueueSubmit(): pSubmits[0].pSignalSemaphores[0] (VkSemaphore 0x110000000011) is being signaled by VkQueue 0xb7f12df58, but it may still be in use by VkSwapchainKHR 0x30000000003.
+Most recently acquired image indices: 0, [1], 2.
+(Brackets mark the last use of VkSemaphore 0x110000000011 in a presentation operation.)
+Swapchain image 1 was presented but was not re-acquired, so VkSemaphore 0x110000000011 may still be in use and cannot be safely reused with image index 2.
+Vulkan insight: See https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html for details on swapchain semaphore reuse. Examples of possible approaches:
+   a) Use a separate semaphore per swapchain image. Index these semaphores using the index of the acquired image.
+   b) Consider the VK_KHR_swapchain_maintenance1 extension. It allows using a VkFence with the presentation operation.
+The Vulkan spec states: Each binary semaphore element of the pSignalSemaphores member of any element of pSubmits must be unsignaled when the semaphore signal operation it defines is executed on the device (https://vulkan.lunarg.com/doc/view/1.4.341.0/mac/antora/spec/latest/chapters/cmdbuffers.html#VUID-vkQueueSubmit-pSignalSemaphores-00067)
+```
+
+## chapt-1 기반 repository 소스
+
+```bash
+[ERROR: Validation] - VUID-vkQueueSubmit2-semaphore-03868
+vkQueueSubmit2(): pSubmits[0].pSignalSemaphoreInfos[0].semaphore (VkSemaphore 0xe000000000e) is being signaled by VkQueue 0xc2f127e98, but it may still be in use by VkSwapchainKHR 0x30000000003.
+Most recently acquired image indices: [0], 1, 2.
+(Brackets mark the last use of VkSemaphore 0xe000000000e in a presentation operation.)
+Swapchain image 0 was presented but was not re-acquired, so VkSemaphore 0xe000000000e may still be in use and cannot be safely reused with image index 2.
+Vulkan insight: See https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html for details on swapchain semaphore reuse. Examples of possible approaches:
+   a) Use a separate semaphore per swapchain image. Index these semaphores using the index of the acquired image.
+   b) Consider the VK_KHR_swapchain_maintenance1 extension. It allows using a VkFence with the presentation operation.
+The Vulkan spec states: The semaphore member of any binary semaphore element of the pSignalSemaphoreInfos member of any element of pSubmits must be unsignaled when the semaphore signal operation it defines is executed on the device (https://vulkan.lunarg.com/doc/view/1.4.341.0/mac/antora/spec/latest/chapters/cmdbuffers.html#VUID-vkQueueSubmit2-semaphore-03868)
+[ERROR: Validation] - VUID-vkQueueSubmit2-semaphore-03868
+vkQueueSubmit2(): pSubmits[0].pSignalSemaphoreInfos[0].semaphore (VkSemaphore 0x110000000011) is being signaled by VkQueue 0xc2f127e98, but it may still be in use by VkSwapchainKHR 0x30000000003.
+Most recently acquired image indices: 0, [1], 2, 0.
+(Brackets mark the last use of VkSemaphore 0x110000000011 in a presentation operation.)
+Swapchain image 1 was presented but was not re-acquired, so VkSemaphore 0x110000000011 may still be in use and cannot be safely reused with image index 0.
+Vulkan insight: See https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html for details on swapchain semaphore reuse. Examples of possible approaches:
+   a) Use a separate semaphore per swapchain image. Index these semaphores using the index of the acquired image.
+   b) Consider the VK_KHR_swapchain_maintenance1 extension. It allows using a VkFence with the presentation operation.
+The Vulkan spec states: The semaphore member of any binary semaphore element of the pSignalSemaphoreInfos member of any element of pSubmits must be unsignaled when the semaphore signal operation it defines is executed on the device (https://vulkan.lunarg.com/doc/view/1.4.341.0/mac/antora/spec/latest/chapters/cmdbuffers.html#VUID-vkQueueSubmit2-semaphore-03868)
+```
