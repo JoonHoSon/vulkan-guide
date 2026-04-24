@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 4.2)
 project(vulkan_guide)
 
-# TODO(joonho): 2026-04-23 Windows VMA 설치 및 환경 변수 확인 필요
-if (NOT DEFINED ENV{VMA_LIB})
-    message("VMA_LIB 설정이 없음")
-    return()
-endif ()
-
 set(CMAKE_CXX_STANDARD 20)
 
 set(SOURCES
@@ -42,22 +36,37 @@ find_package(SDL3_image CONFIG REQUIRED)
 # ---------------------------------------------------------------------------------------------------------------
 # GLM
 # ---------------------------------------------------------------------------------------------------------------
-find_package(glm REQUIRED)
+find_package(glm CONFIG REQUIRED)
 
 # ---------------------------------------------------------------------------------------------------------------
 # FMT
 # ---------------------------------------------------------------------------------------------------------------
-find_package(fmt REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 
 # ---------------------------------------------------------------------------------------------------------------
 # VkBootstrap
 # ---------------------------------------------------------------------------------------------------------------
-find_package(vk-bootstrap REQUIRED)
+find_package(vk-bootstrap CONFIG REQUIRED)
 
 # ---------------------------------------------------------------------------------------------------------------
 # Vulkan Memory Allocator(VMA)
 # ---------------------------------------------------------------------------------------------------------------
-find_package(VulkanMemoryAllocator CONFIG REQUIRED HINTS "$ENV{VMA_LIB}")
+if (NOT WIN32)
+    # TODO(joonho): 2026-04-23 Windows VMA 설치 및 환경 변수 확인 필요
+    if (NOT DEFINED ENV{VMA_LIB})
+        message("VMA_LIB 설정이 없음")
+        return()
+    endif ()
+
+    find_package(VulkanMemoryAllocator CONFIG REQUIRED HINTS "$ENV{VMA_LIB}")
+else ()
+    find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+endif ()
+
+# ---------------------------------------------------------------------------------------------------------------
+# spdlog
+# ---------------------------------------------------------------------------------------------------------------
+find_package(spdlog CONFIG REQUIRED)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
@@ -76,4 +85,5 @@ target_link_libraries(${PROJECT_NAME}
     vk-bootstrap::vk-bootstrap
     Vulkan::Vulkan
     GPUOpen::VulkanMemoryAllocator
+    spdlog::spdlog
 )
