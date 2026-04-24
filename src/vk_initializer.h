@@ -10,8 +10,7 @@
 namespace vkInit {
     VkCommandPoolCreateInfo commandPoolCreateInfo(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0);
 
-    VkCommandBufferAllocateInfo commandBufferAllocateInfo(VkCommandPool pool,
-                                                          uint32_t count = 1,
+    VkCommandBufferAllocateInfo commandBufferAllocateInfo(VkCommandPool pool, uint32_t count = 1,
                                                           VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
     VkCommandBufferBeginInfo commandBufferBeginInfo(VkCommandBufferUsageFlags flags = 0);
@@ -24,8 +23,7 @@ namespace vkInit {
 
     VkPresentInfoKHR presentInfo();
 
-    VkRenderPassBeginInfo renderPassBeginInfo(VkRenderPass render_pass,
-                                              VkExtent2D window_extent,
+    VkRenderPassBeginInfo renderPassBeginInfo(VkRenderPass render_pass, VkExtent2D window_extent,
                                               VkFramebuffer framebuffer);
 
     VkImageSubresourceRange imageSubResourceRange(VkImageAspectFlags flags);
@@ -37,6 +35,10 @@ namespace vkInit {
     VkSubmitInfo2 submitInfo(const VkCommandBufferSubmitInfo *commandSubmitInfo,
                              const VkSemaphoreSubmitInfo *signalSemaphoreSubmitInfo,
                              const VkSemaphoreSubmitInfo *waitSemaphoreSubmitInfo);
-}
 
-#endif //VULKAN_GUIDE_VK_INITIALIZER_H
+    VkImageCreateInfo imageCreateInfo(VkFormat format, VkImageUsageFlags flags, VkExtent3D extent);
+    
+    VkImageViewCreateInfo imageViewCreateInfo(VkFormat format, VkImage image, VkImageAspectFlags flags);
+} // namespace vkInit
+
+#endif // VULKAN_GUIDE_VK_INITIALIZER_H

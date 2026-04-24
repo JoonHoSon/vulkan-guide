@@ -5,12 +5,26 @@
 #ifndef VULKAN_GUIDE_VK_ENGINE_H
 #define VULKAN_GUIDE_VK_ENGINE_H
 
+#include <ranges>
 #include "vk_types.h"
-#include <spdlog/spdlog.h>
 
-#if !defined(NDEBUG) || defined(_DEBUG)
-#define DEBUG_BUILD
-#endif
+struct DeletionQueue {
+    std::deque<std::function<void()>> deleters;
+
+    void pushFunction(std::function<void()> &&function) { deleters.push_back(function); }
+
+    void flush() {
+        // for (auto it = deletors.rbegin(); it != deletors.rend(); i++) {
+        //     (*it)();
+        // }
+
+        for (auto &deleter: std::views::reverse(deleters)) {
+            deleter();
+        }
+
+        deleters.clear();
+    }
+};
 
 struct FrameData {
     VkCommandPool _commandPool;
@@ -25,6 +39,8 @@ struct FrameData {
 
     // 주어진 프레임의 그리기 명령이 끝날때까지 대기 하도록 한다.
     VkFence _renderFence;
+
+    DeletionQueue _deletionQueue;
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -51,13 +67,19 @@ public:
     VkQueue _graphicsQueue;
     uint32_t _graphicsQueueFamily;
 
-    FrameData &getCurrentFrame() {
-        return _frames[_frameNumber % FRAME_OVERLAP];
-    }
+    FrameData &getCurrentFrame() { return _frames[_frameNumber % FRAME_OVERLAP]; }
 
     VkExtent2D _windowExtent{1700, 900};
 
-    struct VulkanEngine &Get();
+    DeletionQueue _mainDeletionQueue;
+
+    VmaAllocator _allocator;
+
+    AllocatedImage _drawImage;
+
+    VkExtent2D _drawExtent;
+
+    VulkanEngine &get();
 
     struct SDL_Window *_window{nullptr};
 
@@ -83,4 +105,4 @@ private:
     void destroySwapChain();
 };
 
-#endif //VULKAN_GUIDE_VK_ENGINE_H
+#endif // VULKAN_GUIDE_VK_ENGINE_H

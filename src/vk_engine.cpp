@@ -15,11 +15,14 @@
 #include "vk_initializer.h"
 #include "vk_types.h"
 
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 constexpr bool bUseValidationLayers = true;
 
 VulkanEngine *loadedEngine = nullptr;
 
-VulkanEngine &VulkanEngine::Get() { return *loadedEngine; }
+VulkanEngine &VulkanEngine::get() { return *loadedEngine; }
 
 void VulkanEngine::init() {
     assert(loadedEngine == nullptr);
@@ -44,13 +47,17 @@ void VulkanEngine::cleanup() {
     if (_isInitialized) {
         vkDeviceWaitIdle(_device);
 
-        for (const auto &frame: _frames) {
+        for (auto &frame: _frames) {
             vkDestroyCommandPool(_device, frame._commandPool, nullptr);
 
             vkDestroyFence(_device, frame._renderFence, nullptr);
             vkDestroySemaphore(_device, frame._renderSemaphore, nullptr);
             vkDestroySemaphore(_device, frame._swapChainSemaphore, nullptr);
+
+            frame._deletionQueue.flush();
         }
+
+        _mainDeletionQueue.flush();
 
         destroySwapChain();
 
@@ -70,6 +77,8 @@ void VulkanEngine::draw() {
     }
 
     VK_CHECK(vkWaitForFences(_device, 1, &getCurrentFrame()._renderFence, true, 1'000'000'000));
+
+    getCurrentFrame()._deletionQueue.flush();
 
     // Reset buffer
     VK_CHECK(vkResetFences(_device, 1, &getCurrentFrame()._renderFence));
@@ -180,7 +189,7 @@ void VulkanEngine::initVulkan() {
     // TODO(joonho): 2026-04-21 allocator 확인 필요
     SDL_Vulkan_CreateSurface(_window, _instance, nullptr, &_surface);
 
-    // FIXME(joonho): 2026-04-21 macOS에서 1.4 feature 설정 시 오류 발생함
+    // MBPR2018(Bootcamp)에서 오류 발생
     // Vulkan 1.4 features
 #if !defined(_WIN32) && !defined(_WIN64)
     VkPhysicalDeviceVulkan14Features features14{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES};
@@ -207,7 +216,7 @@ void VulkanEngine::initVulkan() {
                        .set_surface(_surface);
     // .set_required_features_14(features14)
 #else
-    // windows(bootcapt) amd driver가 구버전임
+    // windows(bootcamp) amd driver가 구버전임
     // Layer VK_LAYER_AMD_switchable_graphics uses API version 1.2 which is older than the application specified API
     // version of 1.4. May cause issues.
     selector = selector.set_minimum_version(1, 2).set_required_features_12(feature12).set_surface(_surface);
@@ -217,13 +226,13 @@ void VulkanEngine::initVulkan() {
     std::vector<vkb::PhysicalDevice> devices = selector.select_devices().value();
 
     for (const auto &dev: devices) {
-        spdlog::debug("-------------------------------------------------------");
-        spdlog::info("Device name    : {}", dev.properties.deviceName);
-        spdlog::debug("API version    : {}", dev.properties.apiVersion);
-        spdlog::debug("Device ID      : {}", dev.properties.deviceID);
-        spdlog::debug("Device type    : {}", static_cast<int>(dev.properties.deviceType));
-        spdlog::debug("Driver version : {}", dev.properties.driverVersion);
-        spdlog::debug("Vendor ID      : {}", dev.properties.vendorID);
+        SPDLOG_DEBUG("-------------------------------------------------------");
+        SPDLOG_DEBUG("Device name    : {}", dev.properties.deviceName);
+        SPDLOG_DEBUG("API version    : {}", dev.properties.apiVersion);
+        SPDLOG_DEBUG("Device ID      : {}", dev.properties.deviceID);
+        SPDLOG_DEBUG("Device type    : {}", static_cast<int>(dev.properties.deviceType));
+        SPDLOG_DEBUG("Driver version : {}", dev.properties.driverVersion);
+        SPDLOG_DEBUG("Vendor ID      : {}", dev.properties.vendorID);
     }
 
     vkb::PhysicalDevice device = selector.select().value();
@@ -236,9 +245,50 @@ void VulkanEngine::initVulkan() {
 
     _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
     _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+    VmaAllocatorCreateInfo allocatorInfo{};
+
+    allocatorInfo.physicalDevice = _chosenGPU;
+    allocatorInfo.device = _device;
+    allocatorInfo.instance = _instance;
+    allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    vmaCreateAllocator(&allocatorInfo, &_allocator);
+
+    _mainDeletionQueue.pushFunction([&] { vmaDestroyAllocator(_allocator); });
 }
 
-void VulkanEngine::initSwapChain() { createSwapChain(_windowExtent.width, _windowExtent.height); }
+void VulkanEngine::initSwapChain() {
+    createSwapChain(_windowExtent.width, _windowExtent.height);
+
+    const VkExtent3D drawImageExtent = {_windowExtent.width, _windowExtent.height, 1};
+    _drawImage.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    _drawImage.imageExtent = drawImageExtent;
+
+    VkImageUsageFlags drawImageUsages{};
+
+    drawImageUsages = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
+                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    VkImageCreateInfo imageInfo = vkInit::imageCreateInfo(_drawImage.imageFormat, drawImageUsages, drawImageExtent);
+    VmaAllocationCreateInfo imageAllocationInfo{};
+
+    imageAllocationInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    imageAllocationInfo.requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    vmaCreateImage(_allocator, &imageInfo, &imageAllocationInfo, &_drawImage.image, &_drawImage.allocation, nullptr);
+
+    VkImageViewCreateInfo imageViewCreateInfo =
+            vkInit::imageViewCreateInfo(_drawImage.imageFormat, _drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    VK_CHECK(vkCreateImageView(_device, &imageViewCreateInfo, nullptr, &_drawImage.imageView));
+
+    // add to deletion queues
+    _mainDeletionQueue.pushFunction(
+            [&]
+            {
+                vkDestroyImageView(_device, _drawImage.imageView, nullptr);
+                vmaDestroyImage(_allocator, _drawImage.image, _drawImage.allocation);
+            });
+}
 
 void VulkanEngine::initCommands() {
     VkCommandPoolCreateInfo command_pool_info = {};
@@ -257,8 +307,8 @@ void VulkanEngine::initCommands() {
 }
 
 void VulkanEngine::initSyncStructures() {
-    VkFenceCreateInfo fenceCreateInfo = vkInit::fenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
-    VkSemaphoreCreateInfo semaphoreCreateInfo = vkInit::semaphoreCreateInfo();
+    const VkFenceCreateInfo fenceCreateInfo = vkInit::fenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
+    const VkSemaphoreCreateInfo semaphoreCreateInfo = vkInit::semaphoreCreateInfo();
 
     for (auto &frame: _frames) {
         VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &frame._renderFence));
