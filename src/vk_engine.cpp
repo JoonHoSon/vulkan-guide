@@ -182,7 +182,7 @@ void VulkanEngine::initVulkan() {
 
     // FIXME(joonho): 2026-04-21 macOS에서 1.4 feature 설정 시 오류 발생함
     // Vulkan 1.4 features
-#if !defined(__WIN32) && !defined(__WIN64)
+#if !defined(_WIN32) && !defined(_WIN64)
     VkPhysicalDeviceVulkan14Features features14{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES};
     features14.dynamicRenderingLocalRead = true;
 
@@ -200,7 +200,7 @@ void VulkanEngine::initVulkan() {
 
     vkb::PhysicalDeviceSelector selector{vkb_inst};
 
-#if !defined(__WIN32) && !defined(__WIN64)
+#if !defined(_WIN32) && !defined(_WIN64)
     selector = selector.set_minimum_version(1, 3)
                        .set_required_features_12(feature12)
                        .set_required_features_13(features13)
