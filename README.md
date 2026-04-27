@@ -71,6 +71,35 @@ export VMA_LIB=/Users/joonho/dev/VulkanMemoryAllocator/build/install
 
 export 처리를 위해 `.bashrc(or .zshrc)`에 등록
 
+## Linux(e.g. Debian)
+
+```bash
+sudo apt install vulkan-tools vulkan libvulkan-dev libsdl3-image-dev
+```
+
+### Vulkan SDK 설치
+
+다운로드 받은 vulkansdk-linu-x86_64-<version>.tar.gz를 적당한 위치에 압축 해제.
+
+```bash
+tar xzf vulkansdk-linux-x86_64-<version>.tar.gz
+mkdir ~/dev/tools && cd $_
+cp -R ~/download/<version> ./vulkansdk<version>
+```
+
+해당 위치에 있는 `setup-env.sh`를 활성화(e.g. **.bashrc** 마지막에 추가)
+
+```bash
+. "$HOME/dev/tools/vulkan<version>
+```
+
+### vk-bootstrap
+
+```bash
+cmake -S . -B build
+sudo cmake --build build --target install
+```
+
 # 정리
 
 ## `VkSemaphore`
