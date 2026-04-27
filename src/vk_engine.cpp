@@ -189,9 +189,8 @@ void VulkanEngine::initVulkan() {
     // TODO(joonho): 2026-04-21 allocator 확인 필요
     SDL_Vulkan_CreateSurface(_window, _instance, nullptr, &_surface);
 
-    // MBPR2018(Bootcamp)에서 오류 발생
-    // Vulkan 1.4 features
 #if !defined(_WIN32) && !defined(_WIN64)
+    // Vulkan 1.4 features
     VkPhysicalDeviceVulkan14Features features14{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES};
     features14.dynamicRenderingLocalRead = true;
 
