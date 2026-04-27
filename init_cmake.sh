@@ -18,7 +18,7 @@ echo "Start project[Debug] initializing..."
 echo "-----------------------------------------------------------------------------"
 cmake -S . -DCMAKE_BUILD_TYPE=Debug -B build/debug
 
-# echo "-----------------------------------------------------------------------------"
-# echo "Start project[Release] initializing..."
-# echo "-----------------------------------------------------------------------------"
-# cmake -S . -DCMAKE_BUILD_TYPE=Release -B build/release
+echo "-----------------------------------------------------------------------------"
+echo "Start project[Release] initializing..."
+echo "-----------------------------------------------------------------------------"
+cmake -S . -DCMAKE_BUILD_TYPE=Release -B build/release
