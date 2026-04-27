@@ -213,8 +213,8 @@ void VulkanEngine::initVulkan() {
     selector = selector.set_minimum_version(1, 3)
                        .set_required_features_12(feature12)
                        .set_required_features_13(features13)
+                       .set_required_features_14(features14)
                        .set_surface(_surface);
-    // .set_required_features_14(features14)
 #else
     // windows(bootcamp) amd driver가 구버전임
     // Layer VK_LAYER_AMD_switchable_graphics uses API version 1.2 which is older than the application specified API
