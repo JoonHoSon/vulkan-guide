@@ -33,6 +33,12 @@ void VulkanEngine::init() {
 
     SDL_Init(SDL_INIT_VIDEO);
 
+    const SDL_DisplayMode *displayMode = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
+
+    if (displayMode) {
+        this->_windowExtent = VkExtent2D{static_cast<uint32_t>(displayMode->w), static_cast<uint32_t>(displayMode->h)};
+    }
+
     _window = SDL_CreateWindow("Vulkan Engine", static_cast<int>(_windowExtent.width),
                                static_cast<int>(_windowExtent.height), flags);
     initVulkan();
