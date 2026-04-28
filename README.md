@@ -73,9 +73,22 @@ export 처리를 위해 `.bashrc(or .zshrc)`에 등록
 
 ## Linux(e.g. Debian)
 
+### 사전 준비
+
 ```bash
-sudo apt install vulkan-tools vulkan libvulkan-dev libsdl3-image-dev
+sudo apt install vulkan-tools libvulkan-dev libsdl3-image-dev libssl-dev glm-dev libfmt-dev libspdlog-dev \
+ninja-build wayland-protocols liblz4-dev clang-format qt6-base-dev
 ```
+
+### cmake 설치
+
+```bash
+wget https://github.com/Kitware/CMake/releases/download/v4.3.2/cmake-4.3.2.tar.gz
+tar xzf cmake-4.3.2.tar.gz
+cd cmake04.3.2
+./bootstrap && make && sudo make install
+```
+
 
 ### Vulkan SDK 설치
 
@@ -85,6 +98,8 @@ sudo apt install vulkan-tools vulkan libvulkan-dev libsdl3-image-dev
 tar xzf vulkansdk-linux-x86_64-<version>.tar.gz
 mkdir ~/dev/tools && cd $_
 cp -R ~/download/<version> ./vulkansdk<version>
+cd ./vulkansdk<version>
+./vulkansdk # sdk build
 ```
 
 해당 위치에 있는 `setup-env.sh`를 활성화(e.g. **.bashrc** 마지막에 추가)
@@ -96,6 +111,15 @@ cp -R ~/download/<version> ./vulkansdk<version>
 ### vk-bootstrap
 
 ```bash
+cmake -S . -B build
+sudo cmake --build build --target install
+```
+
+### VulkanMemoryAllocator
+
+```bash
+git clone git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+cd VulkanMemoryAllocator
 cmake -S . -B build
 sudo cmake --build build --target install
 ```
