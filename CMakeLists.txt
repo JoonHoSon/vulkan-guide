@@ -51,17 +51,7 @@ find_package(vk-bootstrap REQUIRED)
 # ---------------------------------------------------------------------------------------------------------------
 # Vulkan Memory Allocator(VMA)
 # ---------------------------------------------------------------------------------------------------------------
-if (NOT WIN32)
-    # TODO(joonho): 2026-04-23 Windows VMA 설치 및 환경 변수 확인 필요
-    if (NOT DEFINED ENV{VMA_LIB})
-        message("VMA_LIB 설정이 없음")
-        return()
-    endif ()
-
-    find_package(VulkanMemoryAllocator CONFIG REQUIRED HINTS "$ENV{VMA_LIB}")
-else ()
-    find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-endif ()
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 
 # ---------------------------------------------------------------------------------------------------------------
 # spdlog
