@@ -6,6 +6,7 @@
 #define VULKAN_GUIDE_VK_ENGINE_H
 
 #include <ranges>
+#include "vk_descriptors.h"
 #include "vk_types.h"
 
 struct DeletionQueue {
@@ -79,6 +80,16 @@ public:
 
     VkExtent2D _drawExtent;
 
+    DescriptorAllocator globalAllocator;
+
+    VkDescriptorSet _drawImageDescriptors;
+
+    VkDescriptorSetLayout _drawImageDescriptorLayout;
+
+    VkPipeline _gradientPipeline;
+
+    VkPipelineLayout _gradientPipelineLayout;
+
     VulkanEngine &get();
 
     struct SDL_Window *_window{nullptr};
@@ -105,6 +116,12 @@ private:
     void createSwapChain(uint32_t width, uint32_t height);
 
     void destroySwapChain();
+
+    void initDescriptors();
+
+    void initPipelines();
+
+    void initBackgroundPipelines();
 };
 
 #endif // VULKAN_GUIDE_VK_ENGINE_H

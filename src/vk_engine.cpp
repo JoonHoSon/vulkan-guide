@@ -17,6 +17,7 @@
 
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
+#include "vk_pipelines.h"
 
 constexpr bool bUseValidationLayers = true;
 
@@ -46,6 +47,11 @@ void VulkanEngine::init() {
     initSwapChain();
     initCommands();
     initSyncStructures();
+
+    // 반드시 initSyncStructures() 다음에 호출
+    initDescriptors();
+
+    initPipelines();
 
     _isInitialized = true;
 }
@@ -174,13 +180,20 @@ void VulkanEngine::draw() {
 }
 
 void VulkanEngine::drawBackground(VkCommandBuffer buffer) {
-    VkClearColorValue clearValue;
-    float flash = std::abs(std::sin(_frameNumber / 120.f));
-    clearValue = {{0.0f, 0.0f, flash, 1.0f}};
+    // VkClearColorValue clearValue;
+    // float flash = std::abs(std::sin(_frameNumber / 120.f));
+    // clearValue = {{0.0f, 0.0f, flash, 1.0f}};
+    //
+    // VkImageSubresourceRange clearRange = vkInit::imageSubResourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    //
+    // vkCmdClearColorImage(buffer, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
 
-    VkImageSubresourceRange clearRange = vkInit::imageSubResourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipeline);
 
-    vkCmdClearColorImage(buffer, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+    vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1,
+                            &_drawImageDescriptors, 0, nullptr);
+
+    vkCmdDispatch(buffer, std::ceil(_drawExtent.width / 16.0), std::ceil(_drawExtent.height / 16.0), 1);
 }
 
 void VulkanEngine::run() {
@@ -379,4 +392,90 @@ void VulkanEngine::destroySwapChain() {
     for (const auto &view: _swapChainImageViews) {
         vkDestroyImageView(_device, view, nullptr);
     }
+}
+
+void VulkanEngine::initDescriptors() {
+    std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
+
+    globalAllocator.initPool(_device, 10, sizes);
+
+    {
+        DescriptorLayoutBuilder builder;
+
+        builder.addBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+
+        _drawImageDescriptorLayout = builder.build(_device, VK_SHADER_STAGE_COMPUTE_BIT);
+    }
+
+    _drawImageDescriptors = globalAllocator.allocate(_device, _drawImageDescriptorLayout);
+
+    VkDescriptorImageInfo imageInfo{};
+
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    imageInfo.imageView = _drawImage.imageView;
+
+    VkWriteDescriptorSet drawImageWrite{};
+
+    drawImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    drawImageWrite.pNext = nullptr;
+    drawImageWrite.dstBinding = 0;
+    drawImageWrite.dstSet = _drawImageDescriptors;
+    drawImageWrite.descriptorCount = 1;
+    drawImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    drawImageWrite.pImageInfo = &imageInfo;
+
+    vkUpdateDescriptorSets(_device, 1, &drawImageWrite, 0, nullptr);
+
+    _mainDeletionQueue.pushFunction(
+            [&]
+            {
+                globalAllocator.destroyPool(_device);
+                vkDestroyDescriptorSetLayout(_device, _drawImageDescriptorLayout, nullptr);
+            });
+}
+
+void VulkanEngine::initPipelines() { initBackgroundPipelines(); }
+
+void VulkanEngine::initBackgroundPipelines() {
+    VkPipelineLayoutCreateInfo createInfo{};
+
+    createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    createInfo.pNext = nullptr;
+    createInfo.pSetLayouts = &_drawImageDescriptorLayout;
+    createInfo.setLayoutCount = 1;
+
+    VK_CHECK(vkCreatePipelineLayout(_device, &createInfo, nullptr, &_gradientPipelineLayout));
+
+    VkShaderModule shaderModule{};
+
+    if (!vkUtil::loadShaderModule("./shaders/gradient.comp.spv", _device, &shaderModule)) {
+        SPDLOG_ERROR("Error when building the compute shader.");
+        exit(1);
+    }
+
+    VkPipelineShaderStageCreateInfo shaderCreateInfo{};
+
+    shaderCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderCreateInfo.pNext = nullptr;
+    shaderCreateInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    shaderCreateInfo.module = shaderModule;
+    shaderCreateInfo.pName = "main";
+
+    VkComputePipelineCreateInfo computeCreateInfo{};
+
+    computeCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    computeCreateInfo.pNext = nullptr;
+    computeCreateInfo.layout = _gradientPipelineLayout;
+    computeCreateInfo.stage = shaderCreateInfo;
+
+    VK_CHECK(vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computeCreateInfo, nullptr, &_gradientPipeline));
+
+    vkDestroyShaderModule(_device, shaderModule, nullptr);
+
+    _mainDeletionQueue.pushFunction(
+            [&]
+            {
+                vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
+                vkDestroyPipeline(_device, _gradientPipeline, nullptr);
+            });
 }
