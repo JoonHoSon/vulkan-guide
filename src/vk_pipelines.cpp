@@ -7,6 +7,10 @@
 #include "vk_initializer.h"
 #include "vk_types.h"
 
+#if defined(__linux__)
+#include <filesystem>
+#endif
+
 bool vkUtil::loadShaderModule(const char *filePath, VkDevice device, VkShaderModule *shaderModule) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
