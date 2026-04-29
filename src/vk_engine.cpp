@@ -36,7 +36,8 @@ void VulkanEngine::init() {
     const SDL_DisplayMode *displayMode = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
 
     if (displayMode) {
-        this->_windowExtent = VkExtent2D{static_cast<uint32_t>(displayMode->w), static_cast<uint32_t>(displayMode->h)};
+        this->_windowExtent = VkExtent2D{.width = static_cast<uint32_t>(displayMode->w),
+                                         .height = static_cast<uint32_t>(displayMode->h)};
     }
 
     _window = SDL_CreateWindow("Vulkan Engine", static_cast<int>(_windowExtent.width),
@@ -101,11 +102,32 @@ void VulkanEngine::draw() {
     // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
     //  - 해당 버퍼가 단 한번만 제출될 것임을 명시
     //  - 약간의 성능 향상을 기대할 수 있음
-    VkCommandBufferBeginInfo beginInfo = vkInit::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    const VkCommandBufferBeginInfo beginInfo =
+            vkInit::commandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     // Buffer 기록 시작
     VK_CHECK(vkBeginCommandBuffer(command, &beginInfo));
 
+    _drawExtent.width = _drawImage.imageExtent.width;
+    _drawExtent.height = _drawImage.imageExtent.height;
+
+    vkUtil::transitionImage(command, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    drawBackground(command);
+
+    vkUtil::transitionImage(command, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    vkUtil::transitionImage(command, _swapChainImages[swapChainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED,
+                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    vkUtil::copyImageToImage(command, _drawImage.image, _swapChainImages[swapChainImageIndex], _drawExtent,
+                             _swapChainExtent);
+
+    vkUtil::transitionImage(command, _swapChainImages[swapChainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+    VK_CHECK(vkEndCommandBuffer(command));
+
+    /*
     // Make the swap chain image into writeable mode before rendering
     vkUtil::transitionImage(command, _swapChainImages[swapChainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED,
                             VK_IMAGE_LAYOUT_GENERAL);
@@ -124,6 +146,7 @@ void VulkanEngine::draw() {
 
     // Finalize the command buffer (we can no longer add commands, but it can now be executed)
     VK_CHECK(vkEndCommandBuffer(command));
+    */
 
     VkCommandBufferSubmitInfo bufferSubmitInfo = vkInit::commandSubmitInfo(command);
     VkSemaphoreSubmitInfo waitInfo = vkInit::semaphoreSubmitInfo(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
@@ -148,6 +171,16 @@ void VulkanEngine::draw() {
     VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
     _frameNumber++;
+}
+
+void VulkanEngine::drawBackground(VkCommandBuffer buffer) {
+    VkClearColorValue clearValue;
+    float flash = std::abs(std::sin(_frameNumber / 120.f));
+    clearValue = {{0.0f, 0.0f, flash, 1.0f}};
+
+    VkImageSubresourceRange clearRange = vkInit::imageSubResourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+
+    vkCmdClearColorImage(buffer, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
 }
 
 void VulkanEngine::run() {

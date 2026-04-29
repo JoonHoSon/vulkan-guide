@@ -89,6 +89,8 @@ public:
 
     void draw();
 
+    void drawBackground(VkCommandBuffer buffer);
+
     void run();
 
 private:
