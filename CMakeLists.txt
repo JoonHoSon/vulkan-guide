@@ -12,6 +12,10 @@ set(SOURCES
     src/vk_initializer.cpp
     src/vk_images.h
     src/vk_images.cpp
+    src/vk_descriptors.h
+    src/vk_descriptors.cpp
+    src/vk_pipelines.h
+    src/vk_pipelines.cpp
 )
 
 find_package(Vulkan REQUIRED)
@@ -60,12 +64,40 @@ find_package(spdlog CONFIG REQUIRED)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-# if (WIN32)
-#     target_compile_definitions(${PROJECT_NAME}
-#         PRIVATE
-#         VK_USE
-#     )
-# elseif (Darwin)
+# ---------------------------------------------------------------------------------------------------------------
+# Compile shaders
+# ---------------------------------------------------------------------------------------------------------------
+file(GLOB_RECURSE GLSL_SOURCE_FILES
+    "${PROJECT_SOURCE_DIR}/shaders/*.comp"
+)
+
+if (WIN32)
+    # TODO(joonho): 2026-04-29 glslangValidator.exe 위치 추가
+elseif (Darwin)
+    find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/local/bin)
+else ()
+    find_program(GLSL_VALIDATOR glslangValidator HINTS $ENV{VULKAN_SDK}/bin)
+endif ()
+
+foreach (GLSL ${GLSL_SOURCE_FILES})
+    message(STATUS "Building shaders...")
+    get_filename_component(FILE_NAME ${GLSL} NAME)
+    set(SPIRV "${PROJECT_SOURCE_DIR}/shaders/${FILE_NAME}.spv")
+    message(STATUS "Target file : ${GLSL}")
+    add_custom_command(
+        OUTPUT ${SPIRV}
+        COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
+        DEPENDS ${GLSL}
+        #COMMENT "Compiling ${FILE_NAME} to ${SPIRV}."
+    )
+
+    list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+endforeach (GLSL)
+
+add_custom_target(
+    Shaders
+    ALL DEPENDS ${SPIRV_BINARY_FILES}
+)
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
@@ -77,3 +109,4 @@ target_link_libraries(${PROJECT_NAME}
     GPUOpen::VulkanMemoryAllocator
     spdlog::spdlog
 )
+
