@@ -20,6 +20,8 @@ set(SOURCES
 
 find_package(Vulkan REQUIRED)
 
+message(STATUS "Vulkan_INCLUDE_DIRS : ${Vulkan_INCLUDE_DIRS}")
+
 if (WIN32)
     include($ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
     set(VULKAN_INC_DIR "C:/VulkanSDK/1.4.341.1/Include")

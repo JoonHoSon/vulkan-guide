@@ -179,7 +179,7 @@ void VulkanEngine::draw() {
     _frameNumber++;
 }
 
-void VulkanEngine::drawBackground(VkCommandBuffer buffer) {
+void VulkanEngine::drawBackground(const VkCommandBuffer buffer) const {
     // VkClearColorValue clearValue;
     // float flash = std::abs(std::sin(_frameNumber / 120.f));
     // clearValue = {{0.0f, 0.0f, flash, 1.0f}};
@@ -202,6 +202,8 @@ void VulkanEngine::run() {
 
     while (!quit) {
         while (SDL_PollEvent(&e) != 0) {
+            SPDLOG_DEBUG("SDL event type : {}", e.type);
+
             if (e.type == SDL_EVENT_QUIT)
                 quit = true;
 
@@ -215,6 +217,7 @@ void VulkanEngine::run() {
         }
 
         if (stopRendering) {
+            SPDLOG_DEBUG("Windows minimized, so stop rendering.");
             std::this_thread::sleep_for(std::chrono::microseconds(100));
             continue;
         }

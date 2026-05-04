@@ -100,7 +100,7 @@ public:
 
     void draw();
 
-    void drawBackground(VkCommandBuffer buffer);
+    void drawBackground(VkCommandBuffer buffer) const;
 
     void run();
 
