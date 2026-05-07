@@ -79,6 +79,8 @@ else ()
     find_program(GLSL_VALIDATOR glslangValidator HINTS $ENV{VULKAN_SDK}/bin)
 endif ()
 
+message(STATUS "Found GLSL validator : ${GLSL_VALIDATOR}")
+
 foreach (GLSL ${GLSL_SOURCE_FILES})
     message(STATUS "Building shaders...")
     get_filename_component(FILE_NAME ${GLSL} NAME)
