@@ -202,8 +202,6 @@ void VulkanEngine::run() {
 
     while (!quit) {
         while (SDL_PollEvent(&e) != 0) {
-            SPDLOG_DEBUG("SDL event type : {}", e.type);
-
             if (e.type == SDL_EVENT_QUIT)
                 quit = true;
 
