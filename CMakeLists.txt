@@ -114,3 +114,5 @@ target_link_libraries(${PROJECT_NAME}
     spdlog::spdlog
 )
 
+# Copy Shader files to binary directory
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR})
