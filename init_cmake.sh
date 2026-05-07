@@ -19,10 +19,10 @@ if [ "debug" == "$build_type" ]; then
     echo "-----------------------------------------------------------------------------"
     echo "Start project[Debug] initializing..."
     echo "-----------------------------------------------------------------------------"
-    cmake -S . -DCMAKE_BUILD_TYPE=Debug -B build/debug
+    cmake -G Ninja -S . -DCMAKE_BUILD_TYPE=Debug -B build/debug
 else
     echo "-----------------------------------------------------------------------------"
     echo "Start project[Release] initializing..."
     echo "-----------------------------------------------------------------------------"
-    cmake -S . -DCMAKE_BUILD_TYPE=Release -B build/release
+    cmake -G Ninja -S . -DCMAKE_BUILD_TYPE=Release -B build/release
 fi
