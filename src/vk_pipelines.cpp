@@ -14,6 +14,7 @@
 bool vkUtil::loadShaderModule(const char *filePath, VkDevice device, VkShaderModule *shaderModule) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
+    SPDLOG_DEBUG("Shader file path : {}", filePath);
     SPDLOG_DEBUG("Current dir : {}", std::filesystem::current_path().string());
 
     if (!file.is_open()) {
