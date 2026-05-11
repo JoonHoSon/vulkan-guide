@@ -23,7 +23,9 @@ constexpr bool bUseValidationLayers = true;
 
 VulkanEngine *loadedEngine = nullptr;
 
-VulkanEngine &VulkanEngine::get() { return *loadedEngine; }
+VulkanEngine &VulkanEngine::get() {
+    return *loadedEngine;
+}
 
 void VulkanEngine::init() {
     assert(loadedEngine == nullptr);
@@ -34,15 +36,17 @@ void VulkanEngine::init() {
 
     SDL_Init(SDL_INIT_VIDEO);
 
-    const SDL_DisplayMode *displayMode = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
-
-    if (displayMode) {
+    if (const SDL_DisplayMode *displayMode = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay())) {
         this->_windowExtent = VkExtent2D{.width = static_cast<uint32_t>(displayMode->w),
                                          .height = static_cast<uint32_t>(displayMode->h)};
     }
 
-    _window = SDL_CreateWindow("Vulkan Engine", static_cast<int>(_windowExtent.width),
-                               static_cast<int>(_windowExtent.height), flags);
+    _window = SDL_CreateWindow("Vulkan Engine",
+                               static_cast<int>(_windowExtent.width),
+                               static_cast<int>(_windowExtent.height),
+                               flags);
+
+    SDL_GetWindowPosition(_window, &_lastWindowPosition.x, &_lastWindowPosition.y);
     initVulkan();
     initSwapChain();
     initCommands();
@@ -54,11 +58,26 @@ void VulkanEngine::init() {
     initPipelines();
 
     _isInitialized = true;
+
+    // TODO(joonho): 2026-05-11 삭제
+    // 최대 지원 버퍼 개수 확인
+    VkSurfaceCapabilitiesKHR capabilities;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_chosenGPU, _surface, &capabilities);
+
+    SPDLOG_DEBUG("-------------------------------------------------------------------");
+    SPDLOG_DEBUG("Hardware status");
+    SPDLOG_DEBUG("-------------------------------------------------------------------");
+    SPDLOG_DEBUG("Max image count : {}", capabilities.maxImageCount);
+    SPDLOG_DEBUG("Min image count : {}", capabilities.minImageCount);
+    SPDLOG_DEBUG("Max width       : {}", capabilities.maxImageExtent.width);
+    SPDLOG_DEBUG("Max height      : {}", capabilities.maxImageExtent.height);
+    SPDLOG_DEBUG("Min width       : {}", capabilities.minImageExtent.width);
+    SPDLOG_DEBUG("Min height      : {}", capabilities.minImageExtent.height);
 }
 
 void VulkanEngine::cleanup() {
     if (_isInitialized) {
-        vkDeviceWaitIdle(_device);
+        VK_CHECK(vkDeviceWaitIdle(_device));
 
         for (auto &frame: _frames) {
             vkDestroyCommandPool(_device, frame._commandPool, nullptr);
@@ -101,7 +120,12 @@ void VulkanEngine::draw() {
     VK_CHECK(vkResetCommandBuffer(command, 0));
 
     uint32_t swapChainImageIndex;
-    VK_CHECK(vkAcquireNextImageKHR(_device, _swapChain, 1'000'000'000, getCurrentFrame()._swapChainSemaphore, nullptr,
+
+    VK_CHECK(vkAcquireNextImageKHR(_device,
+                                   _swapChain,
+                                   1'000'000'000,
+                                   getCurrentFrame()._swapChainSemaphore,
+                                   nullptr,
                                    &swapChainImageIndex));
 
     // Buffer 기록을 위한 준비
@@ -122,13 +146,20 @@ void VulkanEngine::draw() {
     drawBackground(command);
 
     vkUtil::transitionImage(command, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    vkUtil::transitionImage(command, _swapChainImages[swapChainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED,
+    vkUtil::transitionImage(command,
+                            _swapChainImages[swapChainImageIndex],
+                            VK_IMAGE_LAYOUT_UNDEFINED,
                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    vkUtil::copyImageToImage(command, _drawImage.image, _swapChainImages[swapChainImageIndex], _drawExtent,
+    vkUtil::copyImageToImage(command,
+                             _drawImage.image,
+                             _swapChainImages[swapChainImageIndex],
+                             _drawExtent,
                              _swapChainExtent);
 
-    vkUtil::transitionImage(command, _swapChainImages[swapChainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    vkUtil::transitionImage(command,
+                            _swapChainImages[swapChainImageIndex],
+                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                             VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     VK_CHECK(vkEndCommandBuffer(command));
@@ -190,8 +221,14 @@ void VulkanEngine::drawBackground(const VkCommandBuffer buffer) const {
 
     vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipeline);
 
-    vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, _gradientPipelineLayout, 0, 1,
-                            &_drawImageDescriptors, 0, nullptr);
+    vkCmdBindDescriptorSets(buffer,
+                            VK_PIPELINE_BIND_POINT_COMPUTE,
+                            _gradientPipelineLayout,
+                            0,
+                            1,
+                            &_drawImageDescriptors,
+                            0,
+                            nullptr);
 
     vkCmdDispatch(buffer, std::ceil(_drawExtent.width / 16.0), std::ceil(_drawExtent.height / 16.0), 1);
 }
@@ -199,8 +236,11 @@ void VulkanEngine::drawBackground(const VkCommandBuffer buffer) const {
 void VulkanEngine::run() {
     SDL_Event e;
     bool quit = false;
+    bool changeSwapChain = false;
 
     while (!quit) {
+        changeSwapChain = false;
+
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_EVENT_QUIT)
                 quit = true;
@@ -209,15 +249,55 @@ void VulkanEngine::run() {
                 stopRendering = true;
             }
 
+            if (_completeFirstCycle) {
+                if (e.type == SDL_EVENT_WINDOW_RESIZED || e.type == SDL_EVENT_WINDOW_MOVED) {
+                    stopRendering = true;
+                } else {
+                    stopRendering = false;
+                }
+            }
+
             if (e.type == SDL_EVENT_WINDOW_RESTORED) {
                 stopRendering = false;
             }
         }
 
         if (stopRendering) {
-            SPDLOG_DEBUG("Windows minimized, so stop rendering.");
             std::this_thread::sleep_for(std::chrono::microseconds(100));
             continue;
+        }
+
+        if (!_completeFirstCycle) {
+            _completeFirstCycle = true;
+        }
+
+        //
+        // 현재 창의 크기, 위치를 확인
+        // 만약 창의 크기나 위치가 변경되었다면 swapChain 재생성
+        //
+        if (const SDL_DisplayMode *displayMode = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay())) {
+            changeSwapChain = _windowExtent.width != displayMode->w || _windowExtent.height != displayMode->h;
+        }
+
+        if (!changeSwapChain) {
+            WindowPosition currentPosition{0, 0};
+
+            SDL_GetWindowPosition(_window, &currentPosition.x, &currentPosition.y);
+
+            changeSwapChain = _lastWindowPosition.x != currentPosition.x || _lastWindowPosition.y != currentPosition.y;
+        }
+
+        // SPDLOG_DEBUG("change swap chain : {}", changeSwapChain);
+
+        if (changeSwapChain) {
+            // destroySwapChain();
+            // createSwapChain(_windowExtent.width, _windowExtent.height);
+
+            //
+            // 참고 : https://vulkan-tutorial.com/Drawing_a_triangle/Swap_chain_recreation
+            // vkDeviceWaitIdle(_device) // GPU 작업 완료시까지 대기
+            // loop vkDestroyFrameBuffer
+            //
         }
 
         draw();
@@ -239,7 +319,6 @@ void VulkanEngine::initVulkan() {
     _instance = vkb_inst.instance;
     _debugMessenger = vkb_inst.debug_messenger;
 
-    // TODO(joonho): 2026-04-21 allocator 확인 필요
     SDL_Vulkan_CreateSurface(_window, _instance, nullptr, &_surface);
 
 #if !defined(_WIN32) && !defined(_WIN64)
@@ -334,12 +413,10 @@ void VulkanEngine::initSwapChain() {
     VK_CHECK(vkCreateImageView(_device, &imageViewCreateInfo, nullptr, &_drawImage.imageView));
 
     // add to deletion queues
-    _mainDeletionQueue.pushFunction(
-            [&]
-            {
-                vkDestroyImageView(_device, _drawImage.imageView, nullptr);
-                vmaDestroyImage(_allocator, _drawImage.image, _drawImage.allocation);
-            });
+    _mainDeletionQueue.pushFunction([&] {
+        vkDestroyImageView(_device, _drawImage.imageView, nullptr);
+        vmaDestroyImage(_allocator, _drawImage.image, _drawImage.allocation);
+    });
 }
 
 void VulkanEngine::initCommands() {
@@ -369,10 +446,12 @@ void VulkanEngine::initSyncStructures() {
     }
 }
 
-void VulkanEngine::createSwapChain(uint32_t width, uint32_t height) {
+void VulkanEngine::createSwapChain(const uint32_t width, const uint32_t height) {
     vkb::SwapchainBuilder builder{_chosenGPU, _device, _surface};
     _swapChainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
+    // TODO(joonho): 2026-05-11 set_desired_min_image_count 확인
+    // TODO(joonho): 2026-05-11 set_old_swapchain() 함수 확인
     vkb::Swapchain swapChain =
             builder.set_desired_format(VkSurfaceFormatKHR{.format = _swapChainImageFormat,
                                                           .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
@@ -387,7 +466,7 @@ void VulkanEngine::createSwapChain(uint32_t width, uint32_t height) {
     _swapChainImageViews = swapChain.get_image_views().value();
 }
 
-void VulkanEngine::destroySwapChain() {
+void VulkanEngine::destroySwapChain() const {
     vkDestroySwapchainKHR(_device, _swapChain, nullptr);
 
     for (const auto &view: _swapChainImageViews) {
@@ -399,7 +478,6 @@ void VulkanEngine::initDescriptors() {
     std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
 
     globalAllocator.initPool(_device, 10, sizes);
-
     {
         DescriptorLayoutBuilder builder;
 
@@ -427,15 +505,15 @@ void VulkanEngine::initDescriptors() {
 
     vkUpdateDescriptorSets(_device, 1, &drawImageWrite, 0, nullptr);
 
-    _mainDeletionQueue.pushFunction(
-            [&]
-            {
-                globalAllocator.destroyPool(_device);
-                vkDestroyDescriptorSetLayout(_device, _drawImageDescriptorLayout, nullptr);
-            });
+    _mainDeletionQueue.pushFunction([&] {
+        globalAllocator.destroyPool(_device);
+        vkDestroyDescriptorSetLayout(_device, _drawImageDescriptorLayout, nullptr);
+    });
 }
 
-void VulkanEngine::initPipelines() { initBackgroundPipelines(); }
+void VulkanEngine::initPipelines() {
+    initBackgroundPipelines();
+}
 
 void VulkanEngine::initBackgroundPipelines() {
     VkPipelineLayoutCreateInfo createInfo{};
@@ -473,10 +551,8 @@ void VulkanEngine::initBackgroundPipelines() {
 
     vkDestroyShaderModule(_device, shaderModule, nullptr);
 
-    _mainDeletionQueue.pushFunction(
-            [&]
-            {
-                vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
-                vkDestroyPipeline(_device, _gradientPipeline, nullptr);
-            });
+    _mainDeletionQueue.pushFunction([&] {
+        vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
+        vkDestroyPipeline(_device, _gradientPipeline, nullptr);
+    });
 }

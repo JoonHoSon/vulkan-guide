@@ -28,12 +28,12 @@
 #include <glm/vec4.hpp>
 #include <vk_mem_alloc.h>
 
-#define VK_CHECK(x)                                                        \
-    do {                                                                   \
-        VkResult err = x;                                                  \
-        if (err) {                                                         \
-            fmt::print("Detected Vulkan error: {}", string_VkResult(err)); \
-        }                                                                  \
+#define VK_CHECK(x)                                                          \
+    do {                                                                     \
+        VkResult err = x;                                                    \
+        if (err) {                                                           \
+            fmt::print("Detected Vulkan error: {}\n", string_VkResult(err)); \
+        }                                                                    \
     } while (0)
 
 struct AllocatedImage {

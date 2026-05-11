@@ -10,118 +10,131 @@
 #include "vk_types.h"
 
 struct DeletionQueue {
-    std::deque<std::function<void()>> deleters;
+        std::deque<std::function<void()>> deleters;
 
-    void pushFunction(std::function<void()> &&function) { deleters.push_back(function); }
-
-    void flush() {
-        // for (auto it = deletors.rbegin(); it != deletors.rend(); i++) {
-        //     (*it)();
-        // }
-
-        for (auto &deleter: std::views::reverse(deleters)) {
-            deleter();
+        void pushFunction(std::function<void()> &&function) {
+            deleters.push_back(function);
         }
 
-        deleters.clear();
-    }
+        void flush() {
+            // for (auto it = deletors.rbegin(); it != deletors.rend(); i++) {
+            //     (*it)();
+            // }
+
+            for (auto &deleter: std::views::reverse(deleters)) {
+                deleter();
+            }
+
+            deleters.clear();
+        }
 };
 
 struct FrameData {
-    VkCommandPool _commandPool;
+        VkCommandPool _commandPool;
 
-    VkCommandBuffer _commandBuffer;
+        VkCommandBuffer _commandBuffer;
 
-    // 렌더링 명령이 스왑체인 이미지 요청을 대기 하도록 한다.
-    VkSemaphore _swapChainSemaphore;
+        // 렌더링 명령이 스왑체인 이미지 요청을 대기 하도록 한다.
+        VkSemaphore _swapChainSemaphore;
 
-    // 그리기가 끝났을 때 이미지를 OS에 표시하는 것을 제어한다.
-    VkSemaphore _renderSemaphore;
+        // 그리기가 끝났을 때 이미지를 OS에 표시하는 것을 제어한다.
+        VkSemaphore _renderSemaphore;
 
-    // 주어진 프레임의 그리기 명령이 끝날때까지 대기 하도록 한다.
-    VkFence _renderFence;
+        // 주어진 프레임의 그리기 명령이 끝날때까지 대기 하도록 한다.
+        VkFence _renderFence;
 
-    DeletionQueue _deletionQueue;
+        DeletionQueue _deletionQueue;
 };
+
+typedef struct WindowPosition {
+        int32_t x;
+        int32_t y;
+} WindowPosition;
 
 constexpr unsigned int FRAME_OVERLAP = 2;
 
 class VulkanEngine {
-public:
-    bool _isInitialized{false};
-    int _frameNumber{0};
-    bool stopRendering{false};
-    VkInstance _instance;
-    VkDebugUtilsMessengerEXT _debugMessenger;
-    VkPhysicalDevice _chosenGPU;
-    VkDevice _device;
-    VkSurfaceKHR _surface;
+    public:
+        bool _isInitialized{false};
+        int _frameNumber{0};
+        bool stopRendering{false};
+        bool _completeFirstCycle{false};
+        VkInstance _instance;
+        VkDebugUtilsMessengerEXT _debugMessenger;
+        VkPhysicalDevice _chosenGPU;
+        VkDevice _device;
+        VkSurfaceKHR _surface;
 
-    VkSwapchainKHR _swapChain;
-    VkFormat _swapChainImageFormat;
+        VkSwapchainKHR _swapChain;
+        VkFormat _swapChainImageFormat;
 
-    std::vector<VkImage> _swapChainImages;
-    std::vector<VkImageView> _swapChainImageViews;
-    VkExtent2D _swapChainExtent;
-    FrameData _frames[FRAME_OVERLAP];
+        std::vector<VkImage> _swapChainImages;
+        std::vector<VkImageView> _swapChainImageViews;
+        VkExtent2D _swapChainExtent;
+        FrameData _frames[FRAME_OVERLAP];
 
-    VkQueue _graphicsQueue;
-    uint32_t _graphicsQueueFamily;
+        VkQueue _graphicsQueue;
+        uint32_t _graphicsQueueFamily;
 
-    FrameData &getCurrentFrame() { return _frames[_frameNumber % FRAME_OVERLAP]; }
+        FrameData &getCurrentFrame() {
+            return _frames[_frameNumber % FRAME_OVERLAP];
+        }
 
-    VkExtent2D _windowExtent{1700, 900};
+        DeletionQueue _mainDeletionQueue;
 
-    DeletionQueue _mainDeletionQueue;
+        VmaAllocator _allocator;
 
-    VmaAllocator _allocator;
+        AllocatedImage _drawImage;
 
-    AllocatedImage _drawImage;
+        VkExtent2D _drawExtent;
 
-    VkExtent2D _drawExtent;
+        DescriptorAllocator globalAllocator;
 
-    DescriptorAllocator globalAllocator;
+        VkDescriptorSet _drawImageDescriptors;
 
-    VkDescriptorSet _drawImageDescriptors;
+        VkDescriptorSetLayout _drawImageDescriptorLayout;
 
-    VkDescriptorSetLayout _drawImageDescriptorLayout;
+        VkPipeline _gradientPipeline;
 
-    VkPipeline _gradientPipeline;
+        VkPipelineLayout _gradientPipelineLayout;
 
-    VkPipelineLayout _gradientPipelineLayout;
+        [[deprecated("삭제 예정")]]
+        VulkanEngine &get();
 
-    VulkanEngine &get();
+        VkExtent2D _windowExtent{800, 600};
 
-    struct SDL_Window *_window{nullptr};
+        WindowPosition _lastWindowPosition{0, 0};
 
-    void init();
+        struct SDL_Window *_window{nullptr};
 
-    void cleanup();
+        void init();
 
-    void draw();
+        void cleanup();
 
-    void drawBackground(VkCommandBuffer buffer) const;
+        void draw();
 
-    void run();
+        void drawBackground(VkCommandBuffer buffer) const;
 
-private:
-    void initVulkan();
+        void run();
 
-    void initSwapChain();
+    private:
+        void initVulkan();
 
-    void initCommands();
+        void initSwapChain();
 
-    void initSyncStructures();
+        void initCommands();
 
-    void createSwapChain(uint32_t width, uint32_t height);
+        void initSyncStructures();
 
-    void destroySwapChain();
+        void createSwapChain(uint32_t width, uint32_t height);
 
-    void initDescriptors();
+        void destroySwapChain() const;
 
-    void initPipelines();
+        void initDescriptors();
 
-    void initBackgroundPipelines();
+        void initPipelines();
+
+        void initBackgroundPipelines();
 };
 
 #endif // VULKAN_GUIDE_VK_ENGINE_H
