@@ -7,7 +7,8 @@
 #include <vulkan_core.h>
 
 namespace vkUtil {
-    bool loadShaderModule(const char *filePath, VkDevice device, VkShaderModule *shaderModule);
+bool loadShaderModule(const char *filePath, VkDevice device,
+                      VkShaderModule *shaderModule);
 }
 
-#endif // VULKAN_GUIDE_VK_PIPELINES_H
+#endif  // VULKAN_GUIDE_VK_PIPELINES_H

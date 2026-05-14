@@ -8,6 +8,8 @@
 #if !defined(NDEBUG) || defined(_DEBUG)
 #define DEBUG_BUILD
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#else
+#define SPDLOG_ACTIVE_LEVEL SDPLOG_LEVEL_INFO
 #endif
 
 #include <fmt/core.h>

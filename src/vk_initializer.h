@@ -5,40 +5,73 @@
 #ifndef VULKAN_GUIDE_VK_INITIALIZER_H
 #define VULKAN_GUIDE_VK_INITIALIZER_H
 
+#include <string>
+
 #include "vk_types.h"
+#include "vulkan_core.h"
 
 namespace vkInit {
-    VkCommandPoolCreateInfo commandPoolCreateInfo(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0);
+[[nodiscard]]
+VkCommandPoolCreateInfo commandPoolCreateInfo(
+    uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0);
 
-    VkCommandBufferAllocateInfo commandBufferAllocateInfo(VkCommandPool pool, uint32_t count = 1,
-                                                          VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+[[nodiscard]]
+VkCommandBufferAllocateInfo commandBufferAllocateInfo(
+    VkCommandPool pool, uint32_t count = 1,
+    VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-    VkCommandBufferBeginInfo commandBufferBeginInfo(VkCommandBufferUsageFlags flags = 0);
+[[nodiscard]]
+VkCommandBufferBeginInfo commandBufferBeginInfo(
+    VkCommandBufferUsageFlags flags = 0);
 
-    VkFramebufferCreateInfo frameBufferCreateInfo(VkRenderPass render_pass, VkExtent2D extent);
+[[nodiscard]]
+VkFramebufferCreateInfo frameBufferCreateInfo(VkRenderPass render_pass,
+                                              VkExtent2D extent);
 
-    VkFenceCreateInfo fenceCreateInfo(VkFenceCreateFlags flags = 0);
+[[nodiscard]]
+VkFenceCreateInfo fenceCreateInfo(VkFenceCreateFlags flags = 0);
 
-    VkSemaphoreCreateInfo semaphoreCreateInfo(VkSemaphoreCreateFlags flags = 0);
+[[nodiscard]]
+VkSemaphoreCreateInfo semaphoreCreateInfo(VkSemaphoreCreateFlags flags = 0);
 
-    VkPresentInfoKHR presentInfo();
+[[nodiscard]]
+VkPresentInfoKHR presentInfo();
 
-    VkRenderPassBeginInfo renderPassBeginInfo(VkRenderPass render_pass, VkExtent2D window_extent,
-                                              VkFramebuffer framebuffer);
+[[nodiscard]]
+VkRenderPassBeginInfo renderPassBeginInfo(VkRenderPass render_pass,
+                                          VkExtent2D window_extent,
+                                          VkFramebuffer framebuffer);
+[[nodiscard]]
+VkImageSubresourceRange imageSubResourceRange(VkImageAspectFlags flags);
 
-    VkImageSubresourceRange imageSubResourceRange(VkImageAspectFlags flags);
+[[nodiscard]]
+VkSemaphoreSubmitInfo semaphoreSubmitInfo(VkPipelineStageFlags2 stageMask,
+                                          VkSemaphore semaphore);
 
-    VkSemaphoreSubmitInfo semaphoreSubmitInfo(VkPipelineStageFlags2 stageMask, VkSemaphore semaphore);
+[[nodiscard]]
+VkCommandBufferSubmitInfo commandSubmitInfo(VkCommandBuffer buffer);
 
-    VkCommandBufferSubmitInfo commandSubmitInfo(VkCommandBuffer buffer);
+[[nodiscard]]
+VkSubmitInfo2 submitInfo(const VkCommandBufferSubmitInfo *commandSubmitInfo,
+                         const VkSemaphoreSubmitInfo *signalSemaphoreSubmitInfo,
+                         const VkSemaphoreSubmitInfo *waitSemaphoreSubmitInfo);
 
-    VkSubmitInfo2 submitInfo(const VkCommandBufferSubmitInfo *commandSubmitInfo,
-                             const VkSemaphoreSubmitInfo *signalSemaphoreSubmitInfo,
-                             const VkSemaphoreSubmitInfo *waitSemaphoreSubmitInfo);
+[[nodiscard]]
+VkImageCreateInfo imageCreateInfo(VkFormat format, VkImageUsageFlags flags,
+                                  VkExtent3D extent);
 
-    VkImageCreateInfo imageCreateInfo(VkFormat format, VkImageUsageFlags flags, VkExtent3D extent);
-    
-    VkImageViewCreateInfo imageViewCreateInfo(VkFormat format, VkImage image, VkImageAspectFlags flags);
-} // namespace vkInit
+[[nodiscard]]
+VkImageViewCreateInfo imageViewCreateInfo(VkFormat format, VkImage image,
+                                          VkImageAspectFlags flags);
 
-#endif // VULKAN_GUIDE_VK_INITIALIZER_H
+[[nodiscard]]
+VkRenderingAttachmentInfo attachmentInfo(VkImageView view, VkClearValue *clear,
+                                         VkImageLayout layout);
+
+[[nodiscard]]
+VkRenderingInfo renderingInfo(VkExtent2D extent,
+                              VkRenderingAttachmentInfo *colorAttachment,
+                              VkRenderingAttachmentInfo *depthAttachment);
+}  // namespace vkInit
+
+#endif  // VULKAN_GUIDE_VK_INITIALIZER_H

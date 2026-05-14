@@ -9,6 +9,7 @@
 
 #include "vk_descriptors.h"
 #include "vk_types.h"
+#include "vulkan_core.h"
 
 struct DeletionQueue {
     std::deque<std::function<void()>> deleters;
@@ -108,6 +109,10 @@ public:
 
     struct SDL_Window* _window{nullptr};
 
+    VkFence _immFence;
+    VkCommandBuffer _immCommandBuffer;
+    VkCommandPool _immcommandPool;
+
     void init();
 
     void cleanup();
@@ -118,8 +123,12 @@ public:
 
     void run();
 
+    void immediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function);
+
 private:
     void initVulkan();
+
+    void initImgui();
 
     void initSwapChain();
 
@@ -136,6 +145,8 @@ private:
     void initPipelines();
 
     void initBackgroundPipelines();
+
+    void drawImGui(VkCommandBuffer cmd, VkImageView targetImageView) const;
 };
 
 #endif  // VULKAN_GUIDE_VK_ENGINE_H
