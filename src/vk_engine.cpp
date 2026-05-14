@@ -253,6 +253,14 @@ void VulkanEngine::drawBackground(VkCommandBuffer buffer) const {
                             _gradientPipelineLayout, 0, 1,
                             &_drawImageDescriptors, 0, nullptr);
 
+    ComputePushConstants pc{
+        .data1 = glm::vec4(1, 0, 0, 1),
+        .data2 = glm::vec4(0, 0, 1, 1),
+    };
+
+    vkCmdPushConstants(buffer, _gradientPipelineLayout,
+                       VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                       sizeof(ComputePushConstants), &pc);
     vkCmdDispatch(buffer, std::ceil(_drawExtent.width / 16.0),
                   std::ceil(_drawExtent.height / 16.0), 1);
 }
@@ -692,7 +700,61 @@ void VulkanEngine::initDescriptors() {
     });
 }
 
-void VulkanEngine::initPipelines() { initBackgroundPipelines(); }
+void VulkanEngine::initPipelines() {
+    VkPushConstantRange pushConstant{
+        .offset = 0,
+        .size = sizeof(ComputePushConstants),
+        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+    };
+
+    VkPipelineLayoutCreateInfo computeLayout{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .pSetLayouts = &_drawImageDescriptorLayout,
+        .setLayoutCount = 1,
+        .pPushConstantRanges = &pushConstant,
+        .pushConstantRangeCount = 1,
+    };
+
+    VK_CHECK(vkCreatePipelineLayout(_device, &computeLayout, nullptr,
+                                    &_gradientPipelineLayout));
+
+    VkShaderModule computeDrawShader;
+
+    if (!vkUtil::loadShaderModule("./shaders/gradient_color.comp.spv", _device,
+                                  &computeDrawShader)) {
+        SPDLOG_ERROR("Error when building the compute color shader.");
+        exit(1);
+    }
+
+    VkPipelineShaderStageCreateInfo stageInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+        .module = computeDrawShader,
+        .pName = "main",
+    };
+
+    VkComputePipelineCreateInfo computePipelineCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        .pNext = nullptr,
+        .layout = _gradientPipelineLayout,
+        .stage = stageInfo,
+    };
+
+    VK_CHECK(vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1,
+                                      &computePipelineCreateInfo, nullptr,
+                                      &_gradientPipeline));
+
+    vkDestroyShaderModule(_device, computeDrawShader, nullptr);
+
+    _mainDeletionQueue.pushFunction([&] {
+        vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
+        vkDestroyPipeline(_device, _gradientPipeline, nullptr);
+    });
+
+    // initBackgroundPipelines();
+}
 
 void VulkanEngine::initBackgroundPipelines() {
     VkPipelineLayoutCreateInfo createInfo{};
