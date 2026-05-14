@@ -48,10 +48,17 @@ struct FrameData {
     DeletionQueue _deletionQueue;
 };
 
-typedef struct WindowPosition {
+struct WindowPosition {
     int32_t x;
     int32_t y;
-} WindowPosition;
+};
+
+struct ComputePushConstants {
+    glm::vec4 data1;
+    glm::vec4 data2;
+    glm::vec4 data3;
+    glm::vec4 data4;
+};
 
 constexpr unsigned int FRAME_OVERLAP = 2;
 
@@ -144,6 +151,7 @@ private:
 
     void initPipelines();
 
+    [[deprecated("삭제예정")]]
     void initBackgroundPipelines();
 
     void drawImGui(VkCommandBuffer cmd, VkImageView targetImageView) const;
