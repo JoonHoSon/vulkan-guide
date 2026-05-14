@@ -147,6 +147,10 @@ private:
     void initBackgroundPipelines();
 
     void drawImGui(VkCommandBuffer cmd, VkImageView targetImageView) const;
+
+    // https://github.com/vblanco20-1/vulkan-guide/blob/dcf72a8b3cf93e27b917639a012be1b4b24b5e7d/chapter-2/vk_engine.cpp#L330
+    // 참고
+    // void rebuildSwapChain();
 };
 
 #endif  // VULKAN_GUIDE_VK_ENGINE_H
