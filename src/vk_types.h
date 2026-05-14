@@ -11,6 +11,8 @@
 #endif
 
 #include <spdlog/spdlog.h>
+#include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vulkan.h>
 
 #include <array>
 #include <deque>
@@ -20,19 +22,19 @@
 #include <span>
 #include <string>
 #include <vector>
-#include <vulkan/vk_enum_string_helper.h>
-#include <vulkan/vulkan.h>
 // #include <vk_mem_alloc.h>
 #include <fmt/core.h>
-#include <glm/mat4x4.hpp>
-#include <glm/vec4.hpp>
 #include <vk_mem_alloc.h>
 
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
+
+// fmt::print("Detected Vulkan error: {}\n", string_VkResult(err));
 #define VK_CHECK(x)                                                          \
     do {                                                                     \
         VkResult err = x;                                                    \
         if (err) {                                                           \
-            fmt::print("Detected Vulkan error: {}\n", string_VkResult(err)); \
+            SPDLOG_ERROR("Detected Vulkan error: {}", string_VkResult(err)); \
         }                                                                    \
     } while (0)
 
@@ -44,4 +46,4 @@ struct AllocatedImage {
     VkFormat imageFormat;
 };
 
-#endif // VULKAN_GUIDE_VK_TYPES_H
+#endif  // VULKAN_GUIDE_VK_TYPES_H
