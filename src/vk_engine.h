@@ -8,6 +8,7 @@
 #if defined(__linux__)
 #include <deque>
 #endif
+
 #include <ranges>
 
 #include "vk_descriptors.h"

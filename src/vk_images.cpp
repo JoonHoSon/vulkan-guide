@@ -3,11 +3,20 @@
 //
 
 #include "vk_images.h"
+
 #include "vk_initializer.h"
 
-void vkUtil::transitionImage(const VkCommandBuffer buffer, const VkImage image, const VkImageLayout currentLayout,
+void vkUtil::transitionImage(const VkCommandBuffer buffer, const VkImage image,
+                             const VkImageLayout currentLayout,
                              const VkImageLayout nextLayout) {
-    VkImageMemoryBarrier2 imageBarrier{.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
+    VkImageMemoryBarrier2 imageBarrier{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .pNext = nullptr,
+        .srcStageMask = 0,
+        .srcAccessMask = 0,
+        .dstAccessMask = 0,
+        .dstStageMask = 0,
+    };
 
     imageBarrier.pNext = nullptr;
 
@@ -17,13 +26,15 @@ void vkUtil::transitionImage(const VkCommandBuffer buffer, const VkImage image, 
     imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
     imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
     imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-    imageBarrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
+    imageBarrier.dstAccessMask =
+        VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
     imageBarrier.oldLayout = currentLayout;
     imageBarrier.newLayout = nextLayout;
 
-    VkImageAspectFlags aspectFlags = (nextLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
-                                             ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                             : VK_IMAGE_ASPECT_COLOR_BIT;
+    VkImageAspectFlags aspectFlags =
+        (nextLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
+            ? VK_IMAGE_ASPECT_DEPTH_BIT
+            : VK_IMAGE_ASPECT_COLOR_BIT;
 
     imageBarrier.subresourceRange = vkInit::imageSubResourceRange(aspectFlags);
     imageBarrier.image = image;
@@ -38,9 +49,11 @@ void vkUtil::transitionImage(const VkCommandBuffer buffer, const VkImage image, 
     vkCmdPipelineBarrier2(buffer, &dependencyInfo);
 }
 
-void vkUtil::copyImageToImage(VkCommandBuffer buffer, VkImage source, VkImage destination, VkExtent2D sourceSize,
+void vkUtil::copyImageToImage(VkCommandBuffer buffer, VkImage source,
+                              VkImage destination, VkExtent2D sourceSize,
                               VkExtent2D destinationSize) {
-    VkImageBlit2 blitRegion{.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr};
+    VkImageBlit2 blitRegion{.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
+                            .pNext = nullptr};
 
     blitRegion.srcOffsets[1].x = sourceSize.width;
     blitRegion.srcOffsets[1].y = sourceSize.height;
@@ -57,7 +70,8 @@ void vkUtil::copyImageToImage(VkCommandBuffer buffer, VkImage source, VkImage de
     blitRegion.dstSubresource.layerCount = 1;
     blitRegion.dstSubresource.mipLevel = 0;
 
-    VkBlitImageInfo2 blitInfo{.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2, .pNext = nullptr};
+    VkBlitImageInfo2 blitInfo{.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
+                              .pNext = nullptr};
 
     blitInfo.dstImage = destination;
     blitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -68,7 +82,8 @@ void vkUtil::copyImageToImage(VkCommandBuffer buffer, VkImage source, VkImage de
     blitInfo.pRegions = &blitRegion;
 
     //
-    // vkCmdCopyImage2() 함수는 속도는 빠르지만 두 이미지의 해상도가 반드시 같아야 하는 등의 제약이 있음
+    // vkCmdCopyImage2() 함수는 속도는 빠르지만 두 이미지의 해상도가 반드시
+    // 같아야 하는 등의 제약이 있음
     //
 
     vkCmdBlitImage2(buffer, &blitInfo);
