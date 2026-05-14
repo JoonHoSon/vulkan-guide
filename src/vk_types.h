@@ -10,21 +10,11 @@
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #endif
 
+#include <fmt/core.h>
 #include <spdlog/spdlog.h>
+#include <vk_mem_alloc.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
-
-#include <array>
-#include <deque>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <span>
-#include <string>
-#include <vector>
-// #include <vk_mem_alloc.h>
-#include <fmt/core.h>
-#include <vk_mem_alloc.h>
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
