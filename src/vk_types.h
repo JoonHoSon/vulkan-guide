@@ -5,26 +5,37 @@
 #ifndef VULKAN_GUIDE_VK_TYPES_H
 #define VULKAN_GUIDE_VK_TYPES_H
 
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
-#include <span>
-#include <array>
-#include <functional>
-#include <deque>
-#include <vulkan/vulkan.h>
-#include <vulkan/vk_enum_string_helper.h>
-// #include <vk_mem_alloc.h>
+#if !defined(NDEBUG) || defined(_DEBUG)
+#define DEBUG_BUILD
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#else
+#define SPDLOG_ACTIVE_LEVEL SDPLOG_LEVEL_INFO
+#endif
+
 #include <fmt/core.h>
+#include <spdlog/spdlog.h>
+#include <vk_mem_alloc.h>
+#include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vulkan.h>
+
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 
-#define VK_CHECK(x)\
-    do { \
-        VkResult err = x;\
-        if (err) { \
-            fmt::print("Detected Vulkan error: {}", string_VkResult(err));\
-        }\
+// fmt::print("Detected Vulkan error: {}\n", string_VkResult(err));
+#define VK_CHECK(x)                                                          \
+    do {                                                                     \
+        VkResult err = x;                                                    \
+        if (err) {                                                           \
+            SPDLOG_ERROR("Detected Vulkan error: {}", string_VkResult(err)); \
+        }                                                                    \
     } while (0)
-#endif //VULKAN_GUIDE_VK_TYPES_H
+
+struct AllocatedImage {
+    VkImage image;
+    VkImageView imageView;
+    VmaAllocation allocation;
+    VkExtent3D imageExtent;
+    VkFormat imageFormat;
+};
+
+#endif  // VULKAN_GUIDE_VK_TYPES_H

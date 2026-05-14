@@ -1,3 +1,25 @@
+# Build
+
+## Windows
+
+```bash
+cmake -S . -B build\debug -DCMAKE_BUILD_TYPE=debug -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
+cmake -S . -B build\release -DCMAKE_BUILD_TYPE=release -DCMAKE_TOOLCHAIN_FILE=c:\vcpkg\scripts\buildsystems\vcpkg.cmake
+
+cmake --build .\build\debug
+cmake --build .\build\release
+```
+
+## macOS / Linux
+
+```bash
+cmake -S . -B build/debug -DCMAKE_BUILD_TYPE=debug
+cmake -S . -B build/release -DCMAKE_BUILD_TYPE=release
+
+cmake --build ./build/debug
+cmake --build ./build/release
+```
+
 # Library 설치
 
 ## Windows
@@ -8,8 +30,8 @@ C:\> vcpkg install glm:x64-windows
 C:\> vcpkg install fmt:x64-windows
 C:\> vcpkg install sdl3:x64-windows
 C:\> vcpkg install sdl3_image[jpeg,png,tiff,webp] --recurse # 이건 나중에
+C:\> vcpkg install vulkan-memory-allocator
 C:\> vcpkg integrate install
-C:\> cmake -S . -B build\debug -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
 ```
 
 ## macOS
@@ -36,6 +58,71 @@ sudo cmake --install build
 
 - `/usr/local/lib/libvk-bootstrap.a`
 - `/usr/loccal/lib/vk-bootstrap/vk-bootstrap*.cmake` => cmake 파일?
+
+### Vulkan Memory Allocator
+
+```bash
+git clone git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+cd VulkanMemoryAllocator
+cmake -S . -B build
+cmake --install build --prefix build/install
+export VMA_LIB=/Users/joonho/dev/VulkanMemoryAllocator/build/install
+```
+
+export 처리를 위해 `.bashrc(or .zshrc)`에 등록
+
+## Linux(e.g. Debian)
+
+### 사전 준비
+
+```bash
+sudo apt install vulkan-tools libvulkan-dev libsdl3-image-dev libssl-dev glm-dev libfmt-dev libspdlog-dev \
+ninja-build wayland-protocols liblz4-dev clang-format qt6-base-dev
+```
+
+### cmake 설치
+
+```bash
+wget https://github.com/Kitware/CMake/releases/download/v4.3.2/cmake-4.3.2.tar.gz
+tar xzf cmake-4.3.2.tar.gz
+cd cmake04.3.2
+./bootstrap && make && sudo make install
+```
+
+
+### Vulkan SDK 설치
+
+다운로드 받은 vulkansdk-linu-x86_64-<version>.tar.gz를 적당한 위치에 압축 해제.
+
+```bash
+tar xzf vulkansdk-linux-x86_64-<version>.tar.gz
+mkdir ~/dev/tools && cd $_
+cp -R ~/download/<version> ./vulkansdk<version>
+cd ./vulkansdk<version>
+./vulkansdk # sdk build
+```
+
+해당 위치에 있는 `setup-env.sh`를 활성화(e.g. **.bashrc** 마지막에 추가)
+
+```bash
+. "$HOME/dev/tools/vulkan<version>
+```
+
+### vk-bootstrap
+
+```bash
+cmake -S . -B build
+sudo cmake --build build --target install
+```
+
+### VulkanMemoryAllocator
+
+```bash
+git clone git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+cd VulkanMemoryAllocator
+cmake -S . -B build
+sudo cmake --build build --target install
+```
 
 # 정리
 
@@ -86,7 +173,7 @@ VkDoSomething(opThird); // task2(opSecond)가 종료된 후 수행
 `VulkanEngine#draw()`에서 사용하는 `VK_IMAGE_LAYOUT_GENERAL`은 범용적인 레이아웃으로 이미지로부터 읽기/쓰기가 가능하다.<br>
 Image layout에 대해 보다 자세한
 설명은 [Vulkan Spec: image layouts](https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap12.html#resources-image-layouts)
-참고 
+참고
 
 # 오류 발생
 

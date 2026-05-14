@@ -3,3 +3,6 @@ build
 .vs
 out
 .cache
+*.spv
+imgui
+imgui.ini

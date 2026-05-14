@@ -5,12 +5,31 @@
 #ifndef VULKAN_GUIDE_VK_ENGINE_H
 #define VULKAN_GUIDE_VK_ENGINE_H
 
-#include "vk_types.h"
-#include <spdlog/spdlog.h>
+#include <ranges>
 
-#if !defined(NDEBUG) || defined(_DEBUG)
-#define DEBUG_BUILD
-#endif
+#include "vk_descriptors.h"
+#include "vk_types.h"
+#include "vulkan_core.h"
+
+struct DeletionQueue {
+    std::deque<std::function<void()>> deleters;
+
+    void pushFunction(std::function<void()>&& function) {
+        deleters.push_back(function);
+    }
+
+    void flush() {
+        // for (auto it = deletors.rbegin(); it != deletors.rend(); i++) {
+        //     (*it)();
+        // }
+
+        for (auto& deleter : std::views::reverse(deleters)) {
+            deleter();
+        }
+
+        deleters.clear();
+    }
+};
 
 struct FrameData {
     VkCommandPool _commandPool;
@@ -25,7 +44,14 @@ struct FrameData {
 
     // 주어진 프레임의 그리기 명령이 끝날때까지 대기 하도록 한다.
     VkFence _renderFence;
+
+    DeletionQueue _deletionQueue;
 };
+
+typedef struct WindowPosition {
+    int32_t x;
+    int32_t y;
+} WindowPosition;
 
 constexpr unsigned int FRAME_OVERLAP = 2;
 
@@ -34,6 +60,7 @@ public:
     bool _isInitialized{false};
     int _frameNumber{0};
     bool stopRendering{false};
+    bool _completeFirstCycle{false};
     VkInstance _instance;
     VkDebugUtilsMessengerEXT _debugMessenger;
     VkPhysicalDevice _chosenGPU;
@@ -51,15 +78,40 @@ public:
     VkQueue _graphicsQueue;
     uint32_t _graphicsQueueFamily;
 
-    FrameData &getCurrentFrame() {
+    FrameData& getCurrentFrame() {
         return _frames[_frameNumber % FRAME_OVERLAP];
     }
 
-    VkExtent2D _windowExtent{1700, 900};
+    DeletionQueue _mainDeletionQueue;
 
-    struct VulkanEngine &Get();
+    VmaAllocator _allocator;
 
-    struct SDL_Window *_window{nullptr};
+    AllocatedImage _drawImage;
+
+    VkExtent2D _drawExtent;
+
+    DescriptorAllocator globalAllocator;
+
+    VkDescriptorSet _drawImageDescriptors;
+
+    VkDescriptorSetLayout _drawImageDescriptorLayout;
+
+    VkPipeline _gradientPipeline;
+
+    VkPipelineLayout _gradientPipelineLayout;
+
+    [[deprecated("삭제 예정")]]
+    VulkanEngine& get();
+
+    VkExtent2D _windowExtent{800, 600};
+
+    WindowPosition _lastWindowPosition{0, 0};
+
+    struct SDL_Window* _window{nullptr};
+
+    VkFence _immFence;
+    VkCommandBuffer _immCommandBuffer;
+    VkCommandPool _immcommandPool;
 
     void init();
 
@@ -67,10 +119,16 @@ public:
 
     void draw();
 
+    void drawBackground(VkCommandBuffer buffer) const;
+
     void run();
+
+    void immediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function);
 
 private:
     void initVulkan();
+
+    void initImgui();
 
     void initSwapChain();
 
@@ -80,7 +138,19 @@ private:
 
     void createSwapChain(uint32_t width, uint32_t height);
 
-    void destroySwapChain();
+    void destroySwapChain() const;
+
+    void initDescriptors();
+
+    void initPipelines();
+
+    void initBackgroundPipelines();
+
+    void drawImGui(VkCommandBuffer cmd, VkImageView targetImageView) const;
+
+    // https://github.com/vblanco20-1/vulkan-guide/blob/dcf72a8b3cf93e27b917639a012be1b4b24b5e7d/chapter-2/vk_engine.cpp#L330
+    // 참고
+    // void rebuildSwapChain();
 };
 
-#endif //VULKAN_GUIDE_VK_ENGINE_H
+#endif  // VULKAN_GUIDE_VK_ENGINE_H
