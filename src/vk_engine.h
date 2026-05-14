@@ -5,6 +5,9 @@
 #ifndef VULKAN_GUIDE_VK_ENGINE_H
 #define VULKAN_GUIDE_VK_ENGINE_H
 
+#if defined(__linux__)
+#include <deque>
+#endif
 #include <ranges>
 
 #include "vk_descriptors.h"
