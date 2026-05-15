@@ -1,3 +1,7 @@
+# 문서 설명과 소스 분석이 어려워서 중단.
+
+[Push Constants and new shaders](https://vkguide.dev/docs/ko/new_chapter_2/vulkan_pushconstants/)까지 진행하고 중단. [다른](https://vulkan-tutorial.com/Introduction) 튜토리얼을 기준으로 다시 시작
+
 # Build
 
 ## Windows
@@ -88,7 +92,6 @@ tar xzf cmake-4.3.2.tar.gz
 cd cmake04.3.2
 ./bootstrap && make && sudo make install
 ```
-
 
 ### Vulkan SDK 설치
 
